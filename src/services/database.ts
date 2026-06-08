@@ -25,8 +25,8 @@ class DatabaseService {
   }
 
   private async createSchema() {
-    const schema = `
-      CREATE TABLE IF NOT EXISTS products (
+    const tables = [
+      `CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT,
         name TEXT NOT NULL,
@@ -40,9 +40,8 @@ class DatabaseService {
         deleted INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS customers (
+      );`,
+      `CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         phone TEXT,
@@ -50,9 +49,8 @@ class DatabaseService {
         email TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS sales (
+      );`,
+      `CREATE TABLE IF NOT EXISTS sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER,
         session_id INTEGER,
@@ -62,9 +60,8 @@ class DatabaseService {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(customer_id) REFERENCES customers(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS sale_items (
+      );`,
+      `CREATE TABLE IF NOT EXISTS sale_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sale_id INTEGER,
         product_id INTEGER,
@@ -73,25 +70,22 @@ class DatabaseService {
         subtotal REAL NOT NULL,
         FOREIGN KEY(sale_id) REFERENCES sales(id),
         FOREIGN KEY(product_id) REFERENCES products(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS payments (
+      );`,
+      `CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sale_id INTEGER,
         amount REAL NOT NULL,
         payment_method TEXT,
         payment_date TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(sale_id) REFERENCES sales(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS sessions (
+      );`,
+      `CREATE TABLE IF NOT EXISTS sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         start_time TEXT,
         end_time TEXT,
         is_closed INTEGER DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS movements (
+      );`,
+      `CREATE TABLE IF NOT EXISTS movements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INTEGER,
         product_name TEXT,
@@ -102,10 +96,16 @@ class DatabaseService {
         timestamp TEXT,
         FOREIGN KEY(product_id) REFERENCES products(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)
-      );
-    `;
+      );`,
+      `CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );`
+    ];
 
-    await this.db.execute(schema);
+    for (const table of tables) {
+      await this.db.execute(table);
+    }
   }
 
   async query(sql: string, params?: any[]) {
