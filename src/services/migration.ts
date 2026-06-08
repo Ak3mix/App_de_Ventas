@@ -51,9 +51,20 @@ export const MigrationService = {
     }
   },
 
-  async saveImage(productId: number, base64Data: string) {
-    const fileName = `images/product_${productId}.jpg`;
+  async saveImage(base64Data: string, productId?: number) {
+    const id = productId || Date.now();
+    const fileName = `images/product_${id}.jpg`;
     try {
+      // Ensure directory exists
+      try {
+        await Filesystem.mkdir({
+          path: 'images',
+          directory: Directory.Data,
+        });
+      } catch (e) {
+        // Directory might already exist
+      }
+      
       await Filesystem.writeFile({
         path: fileName,
         data: base64Data,

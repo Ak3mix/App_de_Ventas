@@ -118,6 +118,8 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
   const [formCategory, setFormCategory] = useState('');
   const [formImage, setFormImage] = useState<string | null>(null);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const takePhoto = async () => {
     try {
       const photo = await Camera.getPhoto({
@@ -144,31 +146,27 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
     }
   };
 
-  const selectPhotoFromGallery = async () => {
+  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
     try {
-      const photo = await Camera.getPhoto({
-        quality: 80,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Photos,
-        preserveAspectRatio: true,
-        correctOrientation: true,
-        promptLabelHeader: 'Galería',
-        promptLabelCancel: 'Cancelar'
-      });
-      if (photo.base64String) {
-        const imageFormat = photo.format || 'jpeg';
-        setFormImage(`data:image/${imageFormat};base64,${photo.base64String}`);
-      }
-    } catch (error: any) {
-      console.error('Error al seleccionar foto:', error);
-      if (error.message?.includes('permission') || error.message?.includes('Permission')) {
-        alert('La aplicación necesita permiso para acceder a las fotos. Actívalo en Ajustes > Aplicaciones.');
-      } else if (error.message?.includes('no activity')) {
-        alert('No se encontró una aplicación de galería en este dispositivo.');
-      }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        setFormImage(base64);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error al procesar archivo:', error);
+      alert('Error al seleccionar el archivo.');
     }
   };
+
+  const triggerFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
 
   useEffect(() => {
     if (showEditProduct) {
@@ -218,7 +216,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       cost,
       initial_stock: stock,
       category: formCategory.trim(),
-      image: formImage || undefined
+      image: formImage && formImage.startsWith('data:image') ? await MigrationService.saveImage(formImage) : formImage
     };
 
     console.log("handleAddProduct: Sending data:", data);
@@ -237,7 +235,8 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       }
     } catch (error: any) {
       console.error("handleAddProduct: Catch error:", error);
-      alert("Error al guardar el producto. Intente nuevamente.");
+      const errorMsg = error.message || error.code || (typeof error === 'string' ? error : JSON.stringify(error));
+      alert("Error al guardar el producto: " + errorMsg);
     } finally {
       console.log("handleAddProduct: Finally block reached");
       setIsSaving(false);
@@ -268,7 +267,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       cost,
       stock,
       category: formCategory.trim(),
-      image: formImage || undefined
+      image: formImage && formImage.startsWith('data:image') ? await MigrationService.saveImage(formImage) : formImage
     };
 
     console.log("handleEditProduct: Sending data", data);
@@ -287,7 +286,8 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       }
     } catch (error: any) {
       console.error("handleEditProduct: Catch error:", error);
-      alert("Error al actualizar el producto. Intente nuevamente.");
+      const errorMsg = error.message || error.code || (typeof error === 'string' ? error : JSON.stringify(error));
+      alert("Error al actualizar el producto: " + errorMsg);
     } finally {
       console.log("handleEditProduct: Finally block reached");
       setIsSaving(false);
@@ -305,9 +305,10 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       } else {
         alert("No se pudo eliminar el producto");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("handleDeleteProduct error:", error);
-      alert("Error al eliminar el producto. Intente nuevamente.");
+      const errorMsg = error.message || error.code || (typeof error === 'string' ? error : JSON.stringify(error));
+      alert("Error al eliminar el producto: " + errorMsg);
     } finally {
       setIsDeleting(false);
     }
@@ -330,9 +331,10 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       } else {
         alert("Error en el movimiento");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("handleMove error:", error);
-      alert("Error en el movimiento. Intente nuevamente.");
+      const errorMsg = error.message || error.code || (typeof error === 'string' ? error : JSON.stringify(error));
+      alert("Error en el movimiento: " + errorMsg);
     }
   };
 
@@ -444,6 +446,13 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-stone-400 mb-1 block">Foto del producto</label>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileSelection} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
@@ -464,15 +473,15 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-emerald-50 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors border-2 border-emerald-200"
                           >
                             <CameraIcon size={32} className="text-emerald-500" />
-                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">Cámara</span>
+                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">📷 Tomar foto</span>
                           </button>
                           <button
                             type="button"
-                            onClick={selectPhotoFromGallery}
+                            onClick={triggerFilePicker}
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
-                            <span className="text-[10px] text-blue-600 mt-1 font-bold">Galería</span>
+                            <span className="text-[10px] text-blue-600 mt-1 font-bold">📁 Seleccionar</span>
                           </button>
                         </div>
                       )}
@@ -555,6 +564,13 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-stone-400 mb-1 block">Foto del producto</label>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileSelection} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
@@ -575,15 +591,15 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-emerald-50 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors border-2 border-emerald-200"
                           >
                             <CameraIcon size={32} className="text-emerald-500" />
-                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">Cámara</span>
+                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">📷 Tomar foto</span>
                           </button>
                           <button
                             type="button"
-                            onClick={selectPhotoFromGallery}
+                            onClick={triggerFilePicker}
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
-                            <span className="text-[10px] text-blue-600 mt-1 font-bold">Galería</span>
+                            <span className="text-[10px] text-blue-600 mt-1 font-bold">📁 Seleccionar</span>
                           </button>
                         </div>
                       )}
@@ -1213,9 +1229,10 @@ export default function App() {
       } else {
         alert("Error al procesar la venta");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("handlePay error:", error);
-      alert("Error al procesar el pago. Intente nuevamente.");
+      const errorMsg = error.message || error.code || (typeof error === 'string' ? error : JSON.stringify(error));
+      alert("Error al procesar el pago: " + errorMsg);
     } finally {
       setLoading(false);
     }
