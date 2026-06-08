@@ -16,11 +16,29 @@ class DatabaseService {
       );
       await this.db.open();
 
+      await this.fixSchema();
       await this.createSchema();
       console.log('Database initialized successfully');
     } catch (error) {
       console.error('Error initializing database', error);
       throw error;
+    }
+  }
+
+  private async fixSchema() {
+    try {
+      const result = await this.db.query('PRAGMA table_info(products);');
+      const columns = result.values || [];
+      const hasOldColumn = columns.some((col: any) => col.name === 'stocks');
+      const hasNewColumn = columns.some((col: any) => col.name === 'stock');
+      
+      if (hasOldColumn && !hasNewColumn) {
+        console.log('Renaming column "stocks" to "stock" in "products" table...');
+        await this.db.execute('ALTER TABLE products RENAME COLUMN stocks TO stock;');
+        console.log('Column renamed successfully.');
+      }
+    } catch (error) {
+      console.error('Error fixing schema:', error);
     }
   }
 

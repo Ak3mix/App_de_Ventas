@@ -24,6 +24,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { format } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -118,31 +119,64 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
   const [formCategory, setFormCategory] = useState('');
   const [formImage, setFormImage] = useState<string | null>(null);
 
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   const takePhoto = async () => {
     try {
       const photo = await Camera.getPhoto({
         quality: 80,
         allowEditing: false,
-        resultType: CameraResultType.Base64,
+        resultType: CameraResultType.Uri,
         source: CameraSource.Camera,
         preserveAspectRatio: true,
         correctOrientation: true,
-        promptLabelHeader: 'Cámara',
-        promptLabelCancel: 'Cancelar'
       });
-      if (photo.base64String) {
-        const imageFormat = photo.format || 'jpeg';
-        setFormImage(`data:image/${imageFormat};base64,${photo.base64String}`);
+      
+      if (photo.webPath) {
+        // Copiar a almacenamiento interno
+        const response = await fetch(photo.webPath);
+        const blob = await response.blob();
+        
+        // Convertir blob a base64 para guardar
+        const base64Data = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        
+        setFormImage(base64Data);
       }
     } catch (error: any) {
       console.error('Error al tomar foto:', error);
-      if (error.message?.includes('permission') || error.message?.includes('Permission')) {
-        alert('La aplicación necesita permiso de cámara. Actívalo en Ajustes > Aplicaciones.');
-      } else if (error.message?.includes('no activity')) {
-        alert('No se encontró una aplicación de cámara en este dispositivo.');
+      alert('Error al tomar la foto.');
+    }
+  };
+
+  const selectFile = async () => {
+    try {
+      const result = await FilePicker.pickImages({
+        multiple: false
+      });
+      
+      if (result.files && result.files.length > 0) {
+        const file = result.files[0];
+        
+        // Usar webPath o path según el plugin
+        const path = file.webPath || file.path;
+        if (!path) return;
+
+        const response = await fetch(path);
+        const blob = await response.blob();
+        
+        const base64Data = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        
+        setFormImage(base64Data);
       }
+    } catch (error) {
+      console.error('Error al seleccionar archivo:', error);
+      alert('Error al seleccionar el archivo.');
     }
   };
 
@@ -151,15 +185,19 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
     if (!file) return;
 
     try {
+      // Usamos createObjectURL para vista previa eficiente sin cargar toda la imagen en memoria
+      const previewUrl = URL.createObjectURL(file);
+      
+      // Convertimos a base64 solo para guardar, o idealmente guarda directamente en filesystem
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        setFormImage(base64);
+        setFormImage(base64); // Mantenemos el preview
       };
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('Error al procesar archivo:', error);
-      alert('Error al seleccionar el archivo.');
+      alert('Error al seleccionar el archivo. Intenta con otra imagen.');
     }
   };
 
@@ -446,13 +484,6 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-stone-400 mb-1 block">Foto del producto</label>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileSelection} 
-                      accept="image/*" 
-                      className="hidden" 
-                    />
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
@@ -477,7 +508,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                           </button>
                           <button
                             type="button"
-                            onClick={triggerFilePicker}
+                            onClick={selectFile}
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
@@ -564,13 +595,6 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-stone-400 mb-1 block">Foto del producto</label>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileSelection} 
-                      accept="image/*" 
-                      className="hidden" 
-                    />
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
@@ -595,7 +619,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                           </button>
                           <button
                             type="button"
-                            onClick={triggerFilePicker}
+                            onClick={selectFile}
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
@@ -1055,11 +1079,42 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
         <div className="space-y-3">
           {history.map(session => (
             <div key={session.id} className="bg-white p-4 rounded-2xl border border-stone-200 flex items-center justify-between">
-              <div>
-                <div className="font-bold text-stone-800">Jornada #{session.id}</div>
-                <div className="text-[10px] text-stone-400">
-                  Cerrada: {session.end_time ? format(new Date(session.end_time), 'dd/MM/yyyy HH:mm') : 'N/A'}
-                </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-stone-400 mb-1 block">Foto del producto</label>
+                    <div className="flex gap-3 items-center">
+                      {formImage ? (
+                        <div className="relative">
+                          <img src={formImage} alt="Vista previa" className="w-24 h-24 object-cover rounded-xl bg-stone-100" />
+                          <button
+                            type="button"
+                            onClick={() => setFormImage(null)}
+                            className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full hover:bg-rose-600"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={takePhoto}
+                            className="flex flex-col items-center justify-center w-24 h-24 bg-emerald-50 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors border-2 border-emerald-200"
+                          >
+                            <CameraIcon size={32} className="text-emerald-500" />
+                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">📷 Tomar foto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={selectFile}
+                            className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
+                          >
+                            <ImageIcon size={32} className="text-blue-500" />
+                            <span className="text-[10px] text-blue-600 mt-1 font-bold">📁 Seleccionar</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
               </div>
               <button 
                 onClick={() => exportSessionExcel(session.id, format(new Date(session.end_time || ''), 'yyyy-MM-dd'))}
