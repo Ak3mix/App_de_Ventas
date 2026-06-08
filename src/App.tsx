@@ -159,20 +159,35 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       if (result.files && result.files.length > 0) {
         const file = result.files[0];
         
-        // Usar webPath o path según el plugin
-        const path = file.webPath || file.path;
-        if (!path) return;
+        // En Android/iOS nativo, usamos el Filesystem para leer el archivo de forma robusta
+        if (Capacitor.isNativePlatform()) {
+          if (!file.path) {
+            alert('No se pudo obtener la ruta del archivo.');
+            return;
+          }
+          
+          const fileRead = await Filesystem.readFile({
+            path: file.path,
+          });
+          
+          const mimeType = file.mimeType || 'image/jpeg';
+          setFormImage(`data:${mimeType};base64,${fileRead.data}`);
+        } else {
+          // En web, usamos un fetch tradicional o reader
+          const path = file.webPath || file.path;
+          if (!path) return;
 
-        const response = await fetch(path);
-        const blob = await response.blob();
-        
-        const base64Data = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        
-        setFormImage(base64Data);
+          const response = await fetch(path);
+          const blob = await response.blob();
+          
+          const base64Data = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          
+          setFormImage(base64Data);
+        }
       }
     } catch (error) {
       console.error('Error al seleccionar archivo:', error);
@@ -252,6 +267,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       name: formName.trim(),
       price,
       cost,
+      stock,
       initial_stock: stock,
       category: formCategory.trim(),
       image: formImage && formImage.startsWith('data:image') ? await MigrationService.saveImage(formImage) : formImage
