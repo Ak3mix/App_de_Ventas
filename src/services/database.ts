@@ -16,8 +16,8 @@ class DatabaseService {
       );
       await this.db.open();
 
-      await this.fixSchema();
       await this.createSchema();
+      await this.fixSchema();
       console.log('Database initialized successfully');
     } catch (error) {
       console.error('Error initializing database', error);
@@ -95,6 +95,7 @@ class DatabaseService {
         total REAL NOT NULL,
         payment_method TEXT,
         status TEXT,
+        card_id INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(customer_id) REFERENCES customers(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)
