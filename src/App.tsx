@@ -1075,6 +1075,7 @@ function ReportsTab({ products, onSessionClose, onProductsChange }: { products: 
       const data = await api.getSessionReport(sessionId);
       
       const totals = data.sales.reduce((acc: any, s: any) => {
+        if (s.cancelled) return acc;
         if (s.payment_method === 'cash') {
           acc.cash += s.total;
         } else if (s.payment_method === 'transfer') {
@@ -1113,6 +1114,8 @@ function ReportsTab({ products, onSessionClose, onProductsChange }: { products: 
         }
         if (m.type === 'sale') {
           acc[m.product_id].sold += m.quantity;
+        } else if (m.type === 'cancellation') {
+          acc[m.product_id].sold -= m.quantity;
         }
         return acc;
       }, {});
@@ -1159,6 +1162,7 @@ function ReportsTab({ products, onSessionClose, onProductsChange }: { products: 
       
       const cardStats: any = {};
       data.sales.forEach((s: any) => {
+        if (s.cancelled) return;
         if (s.card_id && cardMap[s.card_id]) {
           const card = cardMap[s.card_id];
           if (!cardStats[card.id]) cardStats[card.id] = { name: card.name, bank: card.bank, total: 0, count: 0 };
