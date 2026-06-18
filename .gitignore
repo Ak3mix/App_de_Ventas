@@ -1,6 +1,9 @@
 ```
 # Build artifacts
 android/app/src/main/assets/public/assets/
+android/.gradle/
+android/app/build/
+android/build/
 
 # Dependencies
 node_modules/
@@ -20,6 +23,10 @@ node_modules/
 # IDE
 .vscode/
 .idea/
+
+# Android keys (Sensitive)
+*.keystore
+*.jks
 
 # OS
 .DS_Store
