@@ -58,6 +58,13 @@ class DatabaseService {
         await this.db.execute('ALTER TABLE sales ADD COLUMN card_id INTEGER;');
       }
 
+      // Sales table fix: add cancelled column
+      const hasSaleCancelled = saleColumns.some((col: any) => col.name === 'cancelled');
+      if (!hasSaleCancelled) {
+        console.log('Adding column "cancelled" to "sales" table...');
+        await this.db.execute('ALTER TABLE sales ADD COLUMN cancelled INTEGER DEFAULT 0;');
+      }
+
       // Sessions table fix: add name and deleted columns
       const sessResult = await this.db.query('PRAGMA table_info(sessions);');
       const sessColumns = sessResult.values || [];
@@ -111,6 +118,7 @@ class DatabaseService {
         payment_method TEXT,
         status TEXT,
         card_id INTEGER,
+        cancelled INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(customer_id) REFERENCES customers(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)

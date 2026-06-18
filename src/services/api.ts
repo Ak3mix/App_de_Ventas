@@ -89,6 +89,10 @@ export const api = {
     return { sales, movements };
   },
 
+  async cancelSale(saleId: number) {
+    return SalesRepository.cancelSale(saleId);
+  },
+
   async getCurrentSession() {
     let session = await SalesRepository.getCurrentSession();
     if (!session) {

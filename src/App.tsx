@@ -112,6 +112,14 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
   const [moveType, setMoveType] = useState<'entry' | 'waste'>('entry');
   const [moveQty, setMoveQty] = useState(1);
   const [moveReason, setMoveReason] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const filteredProducts = products
+    .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+    .filter(p => searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
   
   const [cards, setCards] = useState<any[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -516,10 +524,33 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   </button>
                 </div>
               </div>
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm"
+              />
+              {/* Category Filter */}
+              {categories.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={cn(
+                        "text-[10px] uppercase font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors",
+                        selectedCategory === cat ? "bg-stone-900 text-white" : "bg-stone-100 text-stone-500"
+                      )}
+                    >
+                      {cat === 'all' ? 'Todos' : cat}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="space-y-3">
-                {products
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(product => (
+                {filteredProducts.map(product => (
                   <div key={product.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-sm flex flex-col gap-4">
                     <div className="flex items-start gap-4">
                       {product.image ? (
@@ -539,7 +570,10 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                           {product.category && (
                             <span className="inline-block bg-stone-100 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold mr-2">{product.category}</span>
                           )}
-                          Stock: <span className="font-bold text-stone-600">{product.stock}</span> • 
+                          Stock: <span className={cn("font-bold", (product.stock ?? 0) <= 5 ? "text-rose-600" : "text-stone-600")}>{product.stock}</span>
+                          {(product.stock ?? 0) <= 5 && (
+                            <span className="ml-1 text-[8px] bg-rose-100 text-rose-700 font-black px-1 py-0.5 rounded-full uppercase">Stock Bajo</span>
+                          )} • 
                           Precio: <span className="font-bold text-emerald-600">${product.price.toFixed(2)}</span> •
                           Costo: <span className="font-bold text-stone-500">${(product.cost || 0).toFixed(2)}</span>
                         </div>
@@ -942,13 +976,14 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
   );
 }
 
-function ReportsTab({ products, onSessionClose }: { products: Product[], onSessionClose: () => void }) {
+function ReportsTab({ products, onSessionClose, onProductsChange }: { products: Product[], onSessionClose: () => void, onProductsChange: () => void }) {
   const [reportData, setReportData] = useState<{ sales: Sale[], movements: Movement[], session: Session } | null>(null);
   const [history, setHistory] = useState<Session[]>([]);
   const [isClosing, setIsClosing] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [editSession, setEditSession] = useState<Session | null>(null);
   const [editSessionName, setEditSessionName] = useState('');
+  const [showSalesList, setShowSalesList] = useState(true);
 
   const fetchReport = async () => {
     try {
@@ -998,6 +1033,19 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
     } catch (e) {
       console.error(e);
       alert('Error al eliminar la jornada');
+    }
+  };
+
+  const handleCancelSale = async (saleId: number) => {
+    if (!confirm('¿Anular esta venta? Se restaurará el stock de los productos.')) return;
+    try {
+      await api.cancelSale(saleId);
+      await fetchReport();
+      onProductsChange();
+      alert('Venta anulada correctamente');
+    } catch (e) {
+      console.error(e);
+      alert('Error al anular la venta');
     }
   };
 
@@ -1176,6 +1224,7 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
   };
 
   const totals = reportData?.sales.reduce((acc, s) => {
+    if (s.cancelled) return acc;
     if (s.payment_method === 'cash') {
       acc.cash += s.total;
     } else if (s.payment_method === 'transfer') {
@@ -1228,6 +1277,75 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
           <div className="text-[10px] uppercase font-bold text-stone-400 mb-1">Total Actual</div>
           <div className="text-3xl sm:text-4xl font-black">${totals.total.toFixed(2)}</div>
         </div>
+      </div>
+
+      {/* Collapsible Sales List */}
+      <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden">
+        <button
+          onClick={() => setShowSalesList(!showSalesList)}
+          className="w-full flex items-center justify-between p-4 text-left"
+        >
+          <span className="font-bold text-stone-800">
+            Ventas de la Jornada ({reportData?.sales.filter(s => !s.cancelled).length || 0})
+          </span>
+          <span className="text-stone-400 text-sm">{showSalesList ? '▲' : '▼'}</span>
+        </button>
+        {showSalesList && (
+          <div className="max-h-40 overflow-y-auto border-t border-stone-100">
+            {reportData?.sales.filter((s: any) => !s.cancelled).length === 0 ? (
+              <div className="p-4 text-center text-stone-400 text-sm italic">No hay ventas en esta jornada</div>
+            ) : (
+              reportData?.sales.filter((s: any) => !s.cancelled).map((sale: any) => {
+                const itemSummary = sale.items?.map((i: any) => `${i.quantity}x ${i.product_name || 'Producto'}`).join(', ') || '';
+                const paymentLabel = sale.payment_method === 'cash' ? 'Efectivo'
+                  : sale.payment_method === 'transfer' ? 'Transferencia'
+                  : sale.payments?.map((p: any) => `${p.method === 'cash' ? 'Efectivo' : 'Trans'}: $${p.amount.toFixed(2)}`).join(' · ') || 'Combinado';
+                return (
+                  <div key={sale.id} className="flex items-center justify-between p-3 border-b border-stone-50 last:border-0">
+                    <div className="min-w-0 flex-1 mr-2">
+                      <div className="text-xs font-bold text-stone-800 truncate">
+                        #{sale.id} {itemSummary}
+                      </div>
+                      <div className="text-[10px] text-stone-400">
+                        ${sale.total.toFixed(2)} · {paymentLabel}
+                        {sale.created_at && ` · ${format(new Date(sale.created_at), 'HH:mm')}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCancelSale(sale.id)}
+                      className="text-rose-400 p-1.5 bg-rose-50 rounded-lg active:scale-90 transition-transform shrink-0"
+                      title="Anular venta"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                );
+              }              )
+            )}
+            {/* Cancelled sales */}
+            {reportData?.sales.filter((s: any) => s.cancelled).length > 0 && (
+              <>
+                <div className="px-3 py-2 text-[10px] uppercase font-bold text-stone-400 bg-stone-50">Ventas Anuladas</div>
+                {reportData?.sales.filter((s: any) => s.cancelled).map((sale: any) => {
+                  const itemSummary = sale.items?.map((i: any) => `${i.quantity}x ${i.product_name || 'Producto'}`).join(', ') || '';
+                  return (
+                    <div key={sale.id} className="flex items-center justify-between p-3 border-b border-stone-50 last:border-0 opacity-50">
+                      <div className="min-w-0 flex-1 mr-2">
+                        <div className="text-xs font-bold text-stone-500 line-through truncate">
+                          #{sale.id} {itemSummary}
+                        </div>
+                        <div className="text-[10px] text-stone-400">
+                          ${sale.total.toFixed(2)} · Anulada
+                          {sale.created_at && ` · ${format(new Date(sale.created_at), 'HH:mm')}`}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -1692,7 +1810,7 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              <ReportsTab products={products} onSessionClose={() => { fetchSession(); fetchProducts(); }} />
+              <ReportsTab products={products} onSessionClose={() => { fetchSession(); fetchProducts(); }} onProductsChange={fetchProducts} />
             </motion.div>
           )}
         </AnimatePresence>

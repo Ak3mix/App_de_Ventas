@@ -70,16 +70,44 @@ export const SalesRepository = {
     const result = await dbService.query('SELECT * FROM sales WHERE session_id = ?', [sessionId]);
     const sales = result.values || [];
     
-    // Obtener los pagos correspondientes para cada venta y mapearlos
     for (const sale of sales) {
       const pResult = await dbService.query('SELECT * FROM payments WHERE sale_id = ?', [sale.id]);
       sale.payments = (pResult.values || []).map((p: any) => ({
         ...p,
-        method: p.payment_method // mapeamos 'payment_method' de la DB a 'method' para la app
+        method: p.payment_method
       }));
+      // Obtener items de la venta con nombre del producto
+      const iResult = await dbService.query(
+        'SELECT si.*, p.name as product_name FROM sale_items si LEFT JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?',
+        [sale.id]
+      );
+      sale.items = iResult.values || [];
     }
     
     return sales;
+  },
+
+  async cancelSale(saleId: number) {
+    await dbService.run('UPDATE sales SET cancelled = 1 WHERE id = ?', [saleId]);
+    // Restaurar stock
+    const items = await dbService.query(
+      'SELECT si.*, p.name as product_name FROM sale_items si LEFT JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?',
+      [saleId]
+    );
+    for (const item of (items.values || [])) {
+      await dbService.run('UPDATE products SET stock = stock + ? WHERE id = ?', [item.product_id, item.product_id]);
+    }
+    // Obtener la sesión de la venta para registrar el movimiento de auditoría
+    const saleResult = await dbService.query('SELECT session_id FROM sales WHERE id = ?', [saleId]);
+    const sessionId = saleResult.values?.[0]?.session_id;
+    if (sessionId) {
+      for (const item of (items.values || [])) {
+        await dbService.run(
+          'INSERT INTO movements (product_id, product_name, type, quantity, reason, session_id, timestamp) VALUES (?, ?, "cancellation", ?, ?, ?, ?)',
+          [item.product_id, item.product_name || '', item.quantity, 'Anulación Venta #' + saleId, sessionId, new Date().toISOString()]
+        );
+      }
+    }
   },
 
   async getSessionHistory() {
