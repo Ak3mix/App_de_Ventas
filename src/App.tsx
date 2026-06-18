@@ -488,10 +488,11 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                   <button 
                     onClick={async () => {
                       try {
-                        const result = await FilePicker.pickFiles({ types: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], multiple: false });
+                          const result = await FilePicker.pickFiles({ types: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], multiple: false });
                         if (result.files.length > 0) {
                           const file = result.files[0];
-                          const fileRead = await Filesystem.readFile({ path: file.path! });
+                          if (!file.path) throw new Error('No se pudo obtener la ruta del archivo');
+                          const fileRead = await Filesystem.readFile({ path: file.path });
                           
                           await dataTransferService.importDatabase(fileRead.data as string);
                           alert('Importación exitosa, la app se reiniciará');
@@ -1000,28 +1001,11 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
           acc.cash += s.total;
         } else if (s.payment_method === 'transfer') {
           acc.transfer += s.total;
-        } else if (s.payment_method === 'split' && s.payments_json) {
-          // For split payments, parse the payments_json and add to each total
-          const payments = JSON.parse(s.payments_json);
-          for (const payment of payments) {
-            if (payment.method === 'cash') {
-              acc.cash += payment.amount;
-            } else if (payment.method === 'transfer') {
-              acc.transfer += payment.amount;
-            }
-          }
         } else if (s.payment_method === 'split' && s.payments && Array.isArray(s.payments)) {
-          // Handle case where payments is already an array (not yet stringified)
           for (const payment of s.payments) {
-            if (payment.method === 'cash') {
-              acc.cash += payment.amount;
-            } else if (payment.method === 'transfer') {
-              acc.transfer += payment.amount;
-            }
+            if (payment.method === 'cash') acc.cash += payment.amount;
+            else if (payment.method === 'transfer') acc.transfer += payment.amount;
           }
-        } else {
-          // Fallback: if we can't determine, add to transfer (should not happen normally)
-          acc.transfer += s.total;
         }
         acc.total += s.total;
         return acc;
