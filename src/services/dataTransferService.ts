@@ -7,7 +7,7 @@ import { Share } from '@capacitor/share';
 
 class DataTransferService {
   async exportDatabase(): Promise<string> {
-    const tables = ['products', 'customers', 'sales', 'sale_items', 'payments', 'sessions', 'movements', 'settings'];
+    const tables = ['products', 'customers', 'cards', 'sales', 'sale_items', 'payments', 'sessions', 'movements', 'settings'];
     const workbook = XLSX.utils.book_new();
 
     for (const table of tables) {
@@ -51,13 +51,13 @@ class DataTransferService {
     await dbService.run(`PRAGMA foreign_keys = OFF;`);
 
     // Clear existing data in reverse order of dependency
-    const tables = ['sale_items', 'payments', 'sales', 'movements', 'sessions', 'products', 'customers', 'settings'];
+    const tables = ['sale_items', 'payments', 'sales', 'movements', 'sessions', 'products', 'customers', 'cards', 'settings'];
     for (const table of tables) {
       await dbService.run(`DELETE FROM ${table};`);
     }
 
     // Import data in dependency order
-    const importOrder = ['settings', 'customers', 'sessions', 'products', 'sales', 'payments', 'sale_items', 'movements'];
+    const importOrder = ['settings', 'customers', 'cards', 'sessions', 'products', 'sales', 'payments', 'sale_items', 'movements'];
     for (const table of importOrder) {
       const rows = json[table] || [];
       for (const row of rows) {
