@@ -120,6 +120,15 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
   const [cardFormBank, setCardFormBank] = useState('');
   const [cardFormAccount, setCardFormAccount] = useState('');
 
+  const fetchCards = async () => {
+    const data = await api.getCards();
+    setCards(data);
+  };
+
+  useEffect(() => {
+    fetchCards();
+  }, []);
+
   const handleAddCard = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.addCard({ name: cardFormName, bank: cardFormBank, account_number: cardFormAccount });
@@ -592,69 +601,6 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
             </div>
           )}
 
-      <div className="space-y-3">
-        {products
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map(product => (
-          <div key={product.id} className="bg-white p-4 rounded-2xl border border-stone-200 shadow-sm flex flex-col gap-4">
-            <div className="flex items-start gap-4">
-              {product.image ? (
-                <img 
-                  src={product.image} 
-                  alt={product.name}
-                  className="w-20 h-20 object-cover rounded-xl shrink-0 bg-stone-100"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-stone-100 rounded-xl shrink-0 flex items-center justify-center">
-                  <ImageIcon size={32} className="text-stone-300" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="font-black text-stone-900 text-lg leading-tight truncate">{product.name}</div>
-                <div className="text-xs text-stone-400 mt-1">
-                  {product.category && (
-                    <span className="inline-block bg-stone-100 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold mr-2">{product.category}</span>
-                  )}
-                  Stock: <span className="font-bold text-stone-600">{product.stock}</span> • 
-                  Precio: <span className="font-bold text-emerald-600">${product.price.toFixed(2)}</span> •
-                  Costo: <span className="font-bold text-stone-500">${(product.cost || 0).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button 
-                onClick={() => { setShowMoveModal(product); setMoveType('entry'); }}
-                className="bg-blue-50 text-blue-600 p-2.5 rounded-xl hover:bg-blue-100 transition-colors flex-1 flex justify-center shrink-0"
-                title="Reabastecer"
-              >
-                <ArrowUpCircle size={20} />
-              </button>
-              <button 
-                onClick={() => { setShowMoveModal(product); setMoveType('waste'); }}
-                className="bg-rose-50 text-rose-600 p-2.5 rounded-xl hover:bg-rose-100 transition-colors flex-1 flex justify-center shrink-0"
-                title="Merma"
-              >
-                <ArrowDownCircle size={20} />
-              </button>
-              <button 
-                onClick={() => { setShowEditProduct(product); }}
-                className="bg-stone-50 text-stone-600 p-2.5 rounded-xl hover:bg-stone-100 transition-colors flex-1 flex justify-center shrink-0"
-                title="Editar"
-              >
-                <Edit size={20} />
-              </button>
-              <button 
-                onClick={() => setShowDeleteConfirm(product)}
-                className="bg-stone-50 text-rose-400 p-2.5 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors flex-1 flex justify-center shrink-0"
-                title="Eliminar"
-              >
-                <Trash2 size={20} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Modals for Inventory */}
       <AnimatePresence>
         {showAddCard && (
@@ -1123,10 +1069,27 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
 
       let totalNetProfit = 0;
       Object.values(productInfo).forEach((p: any) => {
-        // ... (existing product detail logic)
+        const subtotal = p.price ? p.sold * p.price : 0;
+        const totalCost = p.cost ? p.sold * p.cost : 0;
+        const netProfit = subtotal - totalCost;
+        if (netProfit > 0) {
+          totalNetProfit += netProfit;
+        }
+        combinedData.push({
+          'Col1': p.name,
+          'Col2': p.sold,
+          'Col3': p.price || '-',
+          'Col4': p.cost || '-',
+          'Col5': p.price ? p.sold * p.price : '-',
+          'Col6': p.cost ? p.sold * p.cost : '-',
+          'Col7': netProfit > 0 ? netProfit : '-',
+          'Col8': p.stock || '-'
+        });
       });
-      // ... (existing product detail logic)
-      
+
+      combinedData.push({ 'Col1': '', 'Col2': '' }); // Separator
+      combinedData.push({ 'Col1': 'GANANCIA NETA TOTAL', 'Col2': totalNetProfit.toFixed(2) });
+
       // Card breakdown
       combinedData.push({ 'Col1': '', 'Col2': '' });
       combinedData.push({ 'Col1': 'VENTAS POR TARJETA', 'Col2': '' });
@@ -1146,10 +1109,6 @@ function ReportsTab({ products, onSessionClose }: { products: Product[], onSessi
         combinedData.push({ 'Col1': cs.name, 'Col2': cs.bank, 'Col3': cs.total.toFixed(2), 'Col4': cs.count });
       });
 
-      // ... (existing waste and profit logic)
-
-      combinedData.push({ 'Col1': '', 'Col2': '' }); // Separator
-      combinedData.push({ 'Col1': 'GANANCIA NETA TOTAL', 'Col2': totalNetProfit.toFixed(2) });
       combinedData.push({ 'Col1': '', 'Col2': '' }); // Separator
       combinedData.push({ 'Col1': 'DETALLE DE MERMAS Y BAJAS', 'Col2': '' });
       combinedData.push({ 'Col1': 'Producto', 'Col2': 'Cant. Perdida', 'Col3': 'Motivo', 'Col4': 'Fecha/Hora' });
@@ -1496,6 +1455,7 @@ export default function App() {
         setCart([]);
         setShowPaymentModal(false);
         setPaymentMethod(null);
+        setSelectedCardId(null);
         setSplitPayments({ cash: 0, transfer: 0 });
         setCashInput('');
         setTransferInput('');
