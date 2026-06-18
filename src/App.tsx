@@ -1314,6 +1314,13 @@ export default function App() {
   useEffect(() => {
     api.getCards().then(setCards);
   }, []);
+
+  useEffect(() => {
+    if (showPaymentModal) {
+      api.getCards().then(setCards);
+    }
+  }, [showPaymentModal]);
+
   const [splitPayments, setSplitPayments] = useState<{ cash: number; transfer: number }>({ cash: 0, transfer: 0 });
   const [cashInput, setCashInput] = useState('');
   const [transferInput, setTransferInput] = useState('');
