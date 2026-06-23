@@ -55,6 +55,29 @@ class DataTransferService {
     await dbService.run(`PRAGMA foreign_keys = ON;`);
   }
 
+  private compressImage(base64Data: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 300;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas context not available')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl.split(',')[1]);
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = base64Data.startsWith('data:') ? base64Data : `data:image/jpeg;base64,${base64Data}`;
+    });
+  }
+
   async exportDatabase(): Promise<string> {
     const xlsxBase64 = await this.generateXLSXBase64();
     const zip = new JSZip();
@@ -62,7 +85,7 @@ class DataTransferService {
     // Add the XLSX to the ZIP
     zip.file('backup.xlsx', xlsxBase64, { base64: true });
 
-    // Add product images
+    // Add product images (compressed)
     const products = await this.getProductsWithImages();
     for (const product of products) {
       try {
@@ -70,7 +93,8 @@ class DataTransferService {
           path: product.image_path,
           directory: Directory.Data,
         });
-        const fileData = result.data as string;
+        let fileData = result.data as string;
+        fileData = await this.compressImage(fileData);
         zip.file(product.image_path, fileData, { base64: true });
       } catch (e) {
         console.error(`Error reading image for product ${product.id}:`, e);

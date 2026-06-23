@@ -530,7 +530,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                         <img 
                           src={product.image} 
                           alt={product.name}
-                          className="w-20 h-20 object-cover rounded-xl shrink-0 bg-stone-100"
+                          className="w-20 h-20 object-contain rounded-xl shrink-0 bg-stone-100"
                         />
                       ) : (
                         <div className="w-20 h-20 bg-stone-100 rounded-xl shrink-0 flex items-center justify-center">
@@ -669,7 +669,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
-                          <img src={formImage} alt="Vista previa" className="w-24 h-24 object-cover rounded-xl bg-stone-100" />
+                          <img src={formImage} alt="Vista previa" className="w-24 h-24 object-contain rounded-xl bg-stone-100" />
                           <button
                             type="button"
                             onClick={() => setFormImage(null)}
@@ -780,7 +780,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                     <div className="flex gap-3 items-center">
                       {formImage ? (
                         <div className="relative">
-                          <img src={formImage} alt="Vista previa" className="w-24 h-24 object-cover rounded-xl bg-stone-100" />
+                          <img src={formImage} alt="Vista previa" className="w-24 h-24 object-contain rounded-xl bg-stone-100" />
                           <button
                             type="button"
                             onClick={() => setFormImage(null)}
@@ -1731,10 +1731,10 @@ export default function App() {
                             <img 
                               src={product.image} 
                               alt={product.name}
-                              className="w-full h-20 object-cover rounded-2xl mb-2 bg-stone-100"
+                              className="w-full aspect-square object-cover rounded-2xl mb-2 bg-stone-100"
                             />
                           ) : (
-                            <div className="w-full h-20 bg-stone-100 rounded-2xl mb-2 flex items-center justify-center">
+                            <div className="w-full aspect-square bg-stone-100 rounded-2xl mb-2 flex items-center justify-center">
                               <ImageIcon size={28} className="text-stone-300" />
                             </div>
                           )}
@@ -1849,7 +1849,7 @@ export default function App() {
                       <img 
                         src={item.image} 
                         alt={item.name}
-                        className="w-16 h-16 object-cover rounded-xl bg-stone-100 shrink-0"
+                        className="w-16 h-16 object-contain rounded-xl bg-stone-100 shrink-0"
                       />
                     ) : (
                       <div className="w-16 h-16 bg-stone-100 rounded-xl shrink-0 flex items-center justify-center">
