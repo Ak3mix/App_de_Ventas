@@ -81,19 +81,31 @@ class DataTransferService {
     const fileName = `backup_ventas_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
 
     if (Capacitor.isNativePlatform()) {
-      const result = await Filesystem.writeFile({
+      // First save to Downloads
+      await Filesystem.writeFile({
         path: fileName,
         data: zipBase64,
-        directory: Directory.Documents,
+        directory: Directory.Downloads,
       });
 
-      await Share.share({
-        title: 'Exportar Base de Datos',
-        text: 'Backup completo de ventas con imágenes',
-        url: result.uri,
-        dialogTitle: 'Compartir Backup',
-      });
-      return `Archivo guardado en: ${result.uri}`;
+      // Then offer to share (in case user wants to send via WhatsApp, etc.)
+      try {
+        const savedUri = await Filesystem.getUri({
+          path: fileName,
+          directory: Directory.Downloads,
+        });
+
+        await Share.share({
+          title: 'Exportar Base de Datos',
+          text: `Backup guardado en Descargas/${fileName}`,
+          url: savedUri.uri,
+          dialogTitle: 'Compartir Backup',
+        });
+      } catch {
+        // Share is optional — user already has the file
+      }
+
+      return `Archivo guardado en: Descargas/${fileName}`;
     } else {
       const blob = new Blob([new Uint8Array(atob(zipBase64).split('').map(c => c.charCodeAt(0)))], { type: 'application/zip' });
       const url = URL.createObjectURL(blob);

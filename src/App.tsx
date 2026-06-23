@@ -7,7 +7,6 @@ import {
   Minus, 
   ArrowUpCircle, 
   ArrowDownCircle, 
-  CheckCircle2, 
   XCircle, 
   FileSpreadsheet,
   Trash2,
@@ -260,32 +259,6 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
       alert('Error al seleccionar el archivo.');
     }
   };
-
-  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      // Usamos createObjectURL para vista previa eficiente sin cargar toda la imagen en memoria
-      const previewUrl = URL.createObjectURL(file);
-      
-      // Convertimos a base64 solo para guardar, o idealmente guarda directamente en filesystem
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-        setFormImage(base64); // Mantenemos el preview
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Error al procesar archivo:', error);
-      alert('Error al seleccionar el archivo. Intenta con otra imagen.');
-    }
-  };
-
-  const triggerFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
 
   useEffect(() => {
     if (showEditProduct) {
@@ -713,7 +686,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-emerald-50 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors border-2 border-emerald-200"
                           >
                             <CameraIcon size={32} className="text-emerald-500" />
-                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">📷 Tomar foto</span>
+                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">Tomar foto</span>
                           </button>
                           <button
                             type="button"
@@ -721,7 +694,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
-                            <span className="text-[10px] text-blue-600 mt-1 font-bold">📁 Seleccionar</span>
+                            <span className="text-[10px] text-blue-600 mt-1 font-bold">Seleccionar</span>
                           </button>
                         </div>
                       )}
@@ -824,7 +797,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-emerald-50 rounded-xl cursor-pointer hover:bg-emerald-100 transition-colors border-2 border-emerald-200"
                           >
                             <CameraIcon size={32} className="text-emerald-500" />
-                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">📷 Tomar foto</span>
+                            <span className="text-[10px] text-emerald-600 mt-1 font-bold">Tomar foto</span>
                           </button>
                           <button
                             type="button"
@@ -832,7 +805,7 @@ function InventoryTab({ products, onUpdate }: { products: Product[], onUpdate: (
                             className="flex flex-col items-center justify-center w-24 h-24 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors border-2 border-blue-200"
                           >
                             <ImageIcon size={32} className="text-blue-500" />
-                            <span className="text-[10px] text-blue-600 mt-1 font-bold">📁 Seleccionar</span>
+                            <span className="text-[10px] text-blue-600 mt-1 font-bold">Seleccionar</span>
                           </button>
                         </div>
                       )}
