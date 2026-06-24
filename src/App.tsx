@@ -15,6 +15,7 @@ import { ReportsTab } from './components/ReportsTab';
 import { VenderGrid } from './components/VenderGrid';
 import { CartModal } from './components/CartModal';
 import { PaymentModal } from './components/PaymentModal';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { App as CapacitorApp } from '@capacitor/app';
 import type { Product, Session, Card, SaleInput } from './types';
 
@@ -53,6 +54,7 @@ export default function App() {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartPulse, setCartPulse] = useState(false);
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))] as string[];
 
@@ -101,9 +103,11 @@ export default function App() {
     return () => { promise.then(h => h.remove()); };
   }, [showPaymentModal, showCartModal, activeTab]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = async (product: Product) => {
     addToCart(product);
-    addToast(`${product.name} agregado`, 'success');
+    setCartPulse(true);
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    setTimeout(() => setCartPulse(false), 600);
   };
 
   const initializeSplitPayments = (method: 'cash' | 'transfer' | 'split') => {
@@ -281,7 +285,10 @@ export default function App() {
             <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto pointer-events-auto">
               <button
                 onClick={() => setShowCartModal(true)}
-                className="w-full bg-stone-900 text-white p-4 rounded-2xl shadow-2xl flex justify-between items-center active:scale-95 transition-transform"
+                className={cn(
+                  "w-full p-4 rounded-2xl shadow-2xl flex justify-between items-center active:scale-95 transition-transform",
+                  cartPulse ? "bg-emerald-600 scale-105 text-white" : "bg-stone-900 text-white"
+                )}
               >
                 <div className="flex items-center gap-3">
                   <div className="bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black">
