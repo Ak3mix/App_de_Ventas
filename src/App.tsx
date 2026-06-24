@@ -130,7 +130,7 @@ export default function App() {
   const handleAddToCart = async (product: Product) => {
     addToCart(product);
     setCartPulse(true);
-    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    try { await Haptics.impact({ style: ImpactStyle.Medium }); } catch {}
     setTimeout(() => setCartPulse(false), 600);
   };
 
@@ -152,6 +152,7 @@ export default function App() {
             if (product) {
               handleAddToCart(product);
             } else {
+              try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
               addToast(`Código no encontrado: ${result.content}`, 'error');
             }
           }
