@@ -14,10 +14,11 @@ export interface ExcelExportParams {
   cards: Card[];
   businessName?: string;
   currencySymbol?: string;
+  sessionName?: string;
 }
 
 export async function exportSessionExcel(params: ExcelExportParams): Promise<void> {
-  const { sessionId, sessionDate, sales, movements, products, cards, businessName = 'VentasPro', currencySymbol = '$' } = params;
+  const { sessionId, sessionDate, sales, movements, products, cards, businessName = 'VentasPro', currencySymbol = '$', sessionName } = params;
 
   const totals = sales.reduce(
     (acc, s) => {
@@ -39,7 +40,7 @@ export async function exportSessionExcel(params: ExcelExportParams): Promise<voi
   );
 
   const combinedData: any[] = [
-    { Col1: businessName, Col2: `Jornada #${sessionId}` },
+    { Col1: businessName, Col2: sessionName || `Jornada #${sessionId}` },
     { Col1: 'Fecha', Col2: sessionDate },
     { Col1: 'Total Efectivo', Col2: totals.cash },
     { Col1: 'Total Transferencia', Col2: totals.transfer },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingCart, Package, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Package, ClipboardList, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from './services/api';
 import { dbService } from './services/database';
@@ -233,13 +233,14 @@ export default function App() {
         <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl mx-auto flex justify-between items-center">
           <button onClick={() => setShowSettings(true)} className="flex items-center gap-2" aria-label="Abrir configuración">
             {profilePhoto ? (
-              <img src={profilePhoto} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+              <img src={profilePhoto} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold flex items-center justify-center shrink-0">
                 {initial}
               </div>
             )}
             <h1 className="text-xl font-bold tracking-tight text-stone-800">{businessName}</h1>
+            <Settings size={16} className="text-stone-400 shrink-0 -ml-1" />
           </button>
           <div className="flex items-center gap-2">
             <div className={cn(

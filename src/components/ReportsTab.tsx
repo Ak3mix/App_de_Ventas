@@ -134,13 +134,14 @@ export function ReportsTab({
     }
   };
 
-  const handleExportExcel = async (sessionId: number, dateStr: string) => {
+  const handleExportExcel = async (sessionId: number, dateStr: string, sessionName?: string) => {
     try {
       const data = await api.getSessionReport(sessionId);
       const cards: Card[] = await api.getCards();
       await exportSessionExcel({
         sessionId,
         sessionDate: dateStr,
+        sessionName,
         sales: data.sales,
         movements: data.movements,
         products,
@@ -313,7 +314,7 @@ export function ReportsTab({
 
         <button
           onClick={() =>
-            reportData && handleExportExcel(reportData.session.id, format(new Date(), 'yyyy-MM-dd'))
+            reportData && handleExportExcel(reportData.session.id, format(new Date(), 'yyyy-MM-dd'), reportData.session.name)
           }
           className="w-full py-4 rounded-2xl font-bold bg-white border-2 border-stone-200 text-stone-700 flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
@@ -457,7 +458,8 @@ export function ReportsTab({
                     onClick={() =>
                       handleExportExcel(
                         session.id,
-                        format(new Date(session.end_time || ''), 'yyyy-MM-dd')
+                        format(new Date(session.end_time || ''), 'yyyy-MM-dd'),
+                        session.name
                       )
                     }
                     className="text-emerald-600 p-3 bg-emerald-50 rounded-xl active:scale-90 transition-transform"
