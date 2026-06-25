@@ -37,6 +37,30 @@ jobs:
           sed -i 's|<activity android:name="com.google.zxing.client.android.encode.EncodeActivity"|<activity android:name="com.google.zxing.client.android.encode.EncodeActivity" android:exported="false"|' android/capacitor-cordova-android-plugins/src/main/AndroidManifest.xml
           sed -i 's|<activity android:name="com.google.zxing.client.android.HelpActivity"|<activity android:name="com.google.zxing.client.android.HelpActivity" android:exported="false"|' android/capacitor-cordova-android-plugins/src/main/AndroidManifest.xml
 
+      # ZXing layout files reference string resources missing from default res/values/
+      - name: Fix ZXing Default Strings
+        run: |
+          mkdir -p android/capacitor-cordova-android-plugins/src/main/res/values
+          FILE=android/capacitor-cordova-android-plugins/src/main/res/values/strings.xml
+          echo "<?xml version='1.0' encoding='utf-8'?>" > $FILE
+          echo "<resources>" >> $FILE
+          echo '  <string name="button_back">Back</string>' >> $FILE
+          echo '  <string name="button_done">Done</string>' >> $FILE
+          echo '  <string name="button_google_shopper">Shopper</string>' >> $FILE
+          echo '  <string name="button_search_book_contents">Search contents</string>' >> $FILE
+          echo '  <string name="button_share_app">Application</string>' >> $FILE
+          echo '  <string name="button_share_bookmark">Bookmark</string>' >> $FILE
+          echo '  <string name="button_share_clipboard">Clipboard</string>' >> $FILE
+          echo '  <string name="button_share_contact">Contact</string>' >> $FILE
+          echo '  <string name="msg_default_format">Format</string>' >> $FILE
+          echo '  <string name="msg_default_meta">Metadata</string>' >> $FILE
+          echo '  <string name="msg_default_status">Place a barcode inside the viewfinder rectangle to scan it.</string>' >> $FILE
+          echo '  <string name="msg_default_time">Time</string>' >> $FILE
+          echo '  <string name="msg_default_type">Type</string>' >> $FILE
+          echo '  <string name="msg_share_explanation">You can share data by displaying a barcode on your screen and scanning it with another phone.</string>' >> $FILE
+          echo '  <string name="msg_share_text">Or type some text and press Enter</string>' >> $FILE
+          echo "</resources>" >> $FILE
+
       # Decode Keystore
       - name: Decode Keystore
         run: |
