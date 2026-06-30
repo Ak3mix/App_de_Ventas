@@ -59,7 +59,7 @@ export function DashboardTab() {
   if (!data) return null;
 
   const { todayStats, topProducts, lowStockCount, recentSales, weeklySales } = data;
-  const maxWeekly = Math.max(...weeklySales.map(w => w.total), 1);
+  const maxWeekly = Math.max(...weeklySales.map(w => w.total), ...weeklySales.map(w => w.net), 1);
 
   return (
     <div className="space-y-4">
@@ -75,14 +75,29 @@ export function DashboardTab() {
       {weeklySales.some(w => w.total > 0) && (
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-3">Ventas semanales</h3>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+              <span className="text-[10px] text-stone-500">Bruta</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-blue-500" />
+              <span className="text-[10px] text-stone-500">Neta</span>
+            </div>
+          </div>
           <div className="flex items-end gap-2 h-32">
             {weeklySales.map((w, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-[10px] font-medium text-stone-500">{formatCurrency(w.total)}</span>
-                <div
-                  className="w-full bg-emerald-500 rounded-t-md transition-all"
-                  style={{ height: Math.max((w.total / maxWeekly) * 100, w.total > 0 ? 4 : 1) + 'px' }}
-                />
+                <div className="flex gap-0.5 w-full items-end justify-center">
+                  <div
+                    className="w-[40%] bg-emerald-500 rounded-t-sm transition-all"
+                    style={{ height: Math.max((w.total / maxWeekly) * 100, w.total > 0 ? 4 : 1) + 'px' }}
+                  />
+                  <div
+                    className="w-[40%] bg-blue-500 rounded-t-sm transition-all"
+                    style={{ height: Math.max((w.net / maxWeekly) * 100, w.net > 0 ? 4 : 1) + 'px' }}
+                  />
+                </div>
                 <span className="text-[10px] font-medium text-stone-500 uppercase">{w.day}</span>
               </div>
             ))}

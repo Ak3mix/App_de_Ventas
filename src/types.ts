@@ -121,5 +121,5 @@ export interface DashboardData {
   topProducts: { name: string; quantity: number; total: number }[];
   lowStockCount: number;
   recentSales: { id: number; total: number; payment_method: string; created_at: string }[];
-  weeklySales: { day: string; total: number }[];
+  weeklySales: { day: string; total: number; net: number }[];
 }

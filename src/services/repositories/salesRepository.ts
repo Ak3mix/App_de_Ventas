@@ -196,20 +196,36 @@ export const SalesRepository = {
       dayLabels.push(d.toLocaleDateString('es', { weekday: 'short' }).slice(0, 3));
     }
     const sevenDaysAgo = dates[0];
-    const result = await dbService.query(
-      `SELECT substr(created_at, 1, 10) as day, COALESCE(SUM(total), 0) as total
-      FROM sales
-      WHERE substr(created_at, 1, 10) >= ? AND (cancelled IS NULL OR cancelled = 0)
-      GROUP BY substr(created_at, 1, 10)`,
-      [sevenDaysAgo]
-    );
-    const totalsByDay: Record<string, number> = {};
-    for (const row of (result.values || [])) {
-      totalsByDay[row.day] = row.total;
+    const [grossResult, netResult] = await Promise.all([
+      dbService.query(
+        `SELECT substr(created_at, 1, 10) as day, COALESCE(SUM(total), 0) as total
+        FROM sales
+        WHERE substr(created_at, 1, 10) >= ? AND (cancelled IS NULL OR cancelled = 0)
+        GROUP BY substr(created_at, 1, 10)`,
+        [sevenDaysAgo]
+      ),
+      dbService.query(
+        `SELECT substr(s.created_at, 1, 10) as day, COALESCE(SUM((si.unit_price - p.cost) * si.quantity), 0) as net
+        FROM sale_items si
+        JOIN products p ON si.product_id = p.id
+        JOIN sales s ON si.sale_id = s.id
+        WHERE substr(s.created_at, 1, 10) >= ? AND (s.cancelled IS NULL OR s.cancelled = 0)
+        GROUP BY substr(s.created_at, 1, 10)`,
+        [sevenDaysAgo]
+      ),
+    ]);
+    const totalsByDay: Record<string, { total: number; net: number }> = {};
+    for (const row of (grossResult.values || [])) {
+      if (!totalsByDay[row.day]) totalsByDay[row.day] = { total: 0, net: 0 };
+      totalsByDay[row.day].total = row.total;
     }
-    return dates.map((dateStr, i) => ({
-      day: dayLabels[i],
-      total: totalsByDay[dateStr] || 0,
-    }));
+    for (const row of (netResult.values || [])) {
+      if (!totalsByDay[row.day]) totalsByDay[row.day] = { total: 0, net: 0 };
+      totalsByDay[row.day].net = row.net;
+    }
+    return dates.map((dateStr, i) => {
+      const d = totalsByDay[dateStr] || { total: 0, net: 0 };
+      return { day: dayLabels[i], total: d.total, net: d.net };
+    });
   },
 };
