@@ -99,9 +99,7 @@ export default function App() {
       try {
         await dbService.initializeDatabase();
         await MigrationService.migrate();
-        await loadSettings();
-        await fetchProducts();
-        await fetchSession();
+        await Promise.all([loadSettings(), fetchProducts(), fetchSession()]);
       } catch (e) {
         console.error("Error initializing app:", e);
       } finally {

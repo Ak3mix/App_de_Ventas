@@ -27,10 +27,9 @@ export const ProductRepository = {
     const result = await dbService.query('SELECT * FROM products WHERE deleted = 0');
     const products = result.values || [];
     
-    // Resolve paths for UI
-    for (const p of products) {
-      p.image = await resolveImagePath(p.image_path);
-    }
+    await Promise.all(products.map(p =>
+      resolveImagePath(p.image_path).then(img => { p.image = img; })
+    ));
     return products;
   },
 

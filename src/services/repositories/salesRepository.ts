@@ -118,27 +118,28 @@ export const SalesRepository = {
 
   async getTodayStats() {
     const today = new Date().toISOString().slice(0, 10);
-    const result = await dbService.query(
-      `SELECT
-        COALESCE(SUM(s.total), 0) as total_sales,
-        COALESCE(SUM(CASE WHEN s.payment_method = 'transfer' THEN s.total ELSE 0 END), 0) as total_transfer,
-        COALESCE(SUM(CASE WHEN s.payment_method = 'split' THEN s.total ELSE 0 END), 0) as total_split,
-        COUNT(*) as ticket_count,
-        COALESCE(SUM(CASE WHEN s.cancelled = 1 THEN 1 ELSE 0 END), 0) as cancelled_count
-      FROM sales s
-      WHERE date(s.created_at) = ?`,
-      [today]
-    );
-    const stats = result.values?.[0] || { total_sales: 0, total_transfer: 0, total_split: 0, ticket_count: 0, cancelled_count: 0 };
-
-    const profitResult = await dbService.query(
-      `SELECT COALESCE(SUM((si.unit_price - p.cost) * si.quantity), 0) as total_net
-      FROM sale_items si
-      JOIN products p ON si.product_id = p.id
-      JOIN sales s ON si.sale_id = s.id
-      WHERE date(s.created_at) = ? AND (s.cancelled IS NULL OR s.cancelled = 0)`,
-      [today]
-    );
+    const [statsResult, profitResult] = await Promise.all([
+      dbService.query(
+        `SELECT
+          COALESCE(SUM(s.total), 0) as total_sales,
+          COALESCE(SUM(CASE WHEN s.payment_method = 'transfer' THEN s.total ELSE 0 END), 0) as total_transfer,
+          COALESCE(SUM(CASE WHEN s.payment_method = 'split' THEN s.total ELSE 0 END), 0) as total_split,
+          COUNT(*) as ticket_count,
+          COALESCE(SUM(CASE WHEN s.cancelled = 1 THEN 1 ELSE 0 END), 0) as cancelled_count
+        FROM sales s
+        WHERE substr(s.created_at, 1, 10) = ? AND (s.cancelled IS NULL OR s.cancelled = 0)`,
+        [today]
+      ),
+      dbService.query(
+        `SELECT COALESCE(SUM((si.unit_price - p.cost) * si.quantity), 0) as total_net
+        FROM sale_items si
+        JOIN products p ON si.product_id = p.id
+        JOIN sales s ON si.sale_id = s.id
+        WHERE substr(s.created_at, 1, 10) = ? AND (s.cancelled IS NULL OR s.cancelled = 0)`,
+        [today]
+      ),
+    ]);
+    const stats = statsResult.values?.[0] || { total_sales: 0, total_transfer: 0, total_split: 0, ticket_count: 0, cancelled_count: 0 };
 
     return {
       totalSales: stats.total_sales || 0,
@@ -186,19 +187,29 @@ export const SalesRepository = {
   },
 
   async getWeeklySales() {
-    const days: { day: string; total: number }[] = [];
+    const dates: string[] = [];
+    const dayLabels: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const dayLabel = d.toLocaleDateString('es', { weekday: 'short' }).slice(0, 3);
-      const result = await dbService.query(
-        `SELECT COALESCE(SUM(total), 0) as total FROM sales
-        WHERE date(created_at) = ? AND (cancelled IS NULL OR cancelled = 0)`,
-        [dateStr]
-      );
-      days.push({ day: dayLabel, total: result.values?.[0]?.total || 0 });
+      dates.push(d.toISOString().slice(0, 10));
+      dayLabels.push(d.toLocaleDateString('es', { weekday: 'short' }).slice(0, 3));
     }
-    return days;
+    const sevenDaysAgo = dates[0];
+    const result = await dbService.query(
+      `SELECT substr(created_at, 1, 10) as day, COALESCE(SUM(total), 0) as total
+      FROM sales
+      WHERE substr(created_at, 1, 10) >= ? AND (cancelled IS NULL OR cancelled = 0)
+      GROUP BY substr(created_at, 1, 10)`,
+      [sevenDaysAgo]
+    );
+    const totalsByDay: Record<string, number> = {};
+    for (const row of (result.values || [])) {
+      totalsByDay[row.day] = row.total;
+    }
+    return dates.map((dateStr, i) => ({
+      day: dayLabels[i],
+      total: totalsByDay[dateStr] || 0,
+    }));
   },
 };

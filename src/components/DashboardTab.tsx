@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, AlertTriangle, Hash, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api } from '../services/api';
@@ -13,12 +13,32 @@ const paymentLabels: Record<string, string> = {
   split: 'Mixto',
 };
 
+let cachedData: DashboardData | null = null;
+
+function formatSaleDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const isToday = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return time;
+  const date = d.toLocaleDateString('es', { day: '2-digit', month: '2-digit' });
+  return `${date} ${time}`;
+}
+
 export function DashboardTab() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData | null>(cachedData);
+  const [loading, setLoading] = useState(!cachedData);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    api.getDashboardData().then(d => { setData(d); setLoading(false); });
+    mountedRef.current = true;
+    api.getDashboardData().then(d => {
+      if (!mountedRef.current) return;
+      cachedData = d;
+      setData(d);
+      setLoading(false);
+    });
+    return () => { mountedRef.current = false; };
   }, []);
 
   if (loading) {
@@ -111,7 +131,7 @@ export function DashboardTab() {
                 <div className="flex items-center gap-2">
                   <Clock size={14} className="text-stone-400 shrink-0" />
                   <span className="text-sm text-stone-600">
-                    {new Date(s.created_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                    {formatSaleDate(s.created_at)}
                   </span>
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-600 capitalize">
                     {paymentLabels[s.payment_method] || s.payment_method}
