@@ -264,7 +264,7 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
             >
               <ErrorBoundary label="Dashboard">
-                <DashboardTab lowStockThreshold={lowStockThreshold} />
+                <DashboardTab lowStockThreshold={lowStockThreshold} appLoading={isLoading} />
               </ErrorBoundary>
             </motion.div>
           )}

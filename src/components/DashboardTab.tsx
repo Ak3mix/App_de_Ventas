@@ -27,14 +27,16 @@ function formatSaleDate(dateStr: string) {
 
 interface Props {
   lowStockThreshold: number;
+  appLoading: boolean;
 }
 
-export function DashboardTab({ lowStockThreshold }: Props) {
+export function DashboardTab({ lowStockThreshold, appLoading }: Props) {
   const [data, setData] = useState<DashboardData | null>(cachedData);
   const [loading, setLoading] = useState(!cachedData);
   const mountedRef = useRef(true);
 
   useEffect(() => {
+    if (appLoading) return;
     mountedRef.current = true;
     api.getDashboardData(lowStockThreshold)
       .then(d => {
@@ -45,7 +47,7 @@ export function DashboardTab({ lowStockThreshold }: Props) {
       })
       .catch(e => { console.error(e); setLoading(false); });
     return () => { mountedRef.current = false; };
-  }, [lowStockThreshold]);
+  }, [lowStockThreshold, appLoading]);
 
   if (loading) {
     return (
@@ -94,7 +96,7 @@ export function DashboardTab({ lowStockThreshold }: Props) {
           <div className="flex items-end gap-2" style={{ height: '140px' }}>
             {weeklySales.map((w, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-0.5 self-end">
-                <span className="text-[9px] font-bold text-stone-600 leading-tight">{formatCurrency(w.total)}</span>
+                <span className="text-[9px] font-bold text-emerald-600 leading-tight">{formatCurrency(w.total)}</span>
                 <span className="text-[8px] font-medium text-blue-600 leading-tight">{formatCurrency(w.net)}</span>
                 <div className="flex gap-0.5 w-full items-end justify-center">
                   <div
