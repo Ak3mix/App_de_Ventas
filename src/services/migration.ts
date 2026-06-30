@@ -6,31 +6,28 @@ export const MigrationService = {
   async migrate() {
     console.log('Starting migration...');
     try {
-      const migrated = await this.isMigrated();
-      if (migrated) return;
+      const result = await dbService.query(
+        "SELECT key, value FROM settings WHERE key IN ('migrated', 'schema_fixed')"
+      );
+      const flags: Record<string, string> = {};
+      for (const row of (result.values || [])) flags[row.key] = row.value;
+      if (flags.migrated && flags.schema_fixed) return;
 
-      // 1. Migrate Products
-      await this.migrateProducts();
-      
-      // 2. Migrate Customers
-      await this.migrateCustomers();
-      
-      // 3. Migrate Sales
-      await this.migrateSales();
+      if (!flags.migrated) {
+        await this.migrateProducts();
+        await this.migrateCustomers();
+        await this.migrateSales();
+        this.clearLocalStorage();
+        await this.markAsMigrated();
+      }
+      if (!flags.schema_fixed) {
+        await this.runSchemaFixes();
+      }
 
-      // 4. Run schema fixes (one-time ALTER TABLE for old schemas)
-      await this.runSchemaFixes();
-
-      // 5. Mark as migrated
-      await this.markAsMigrated();
-      
-      // 6. Clean localStorage
-      this.clearLocalStorage();
-      
       console.log('Migration completed.');
     } catch (error) {
       console.error('Migration Process Failed:', error);
-      throw error; // Re-throw to handle or stop init
+      throw error;
     }
   },
 

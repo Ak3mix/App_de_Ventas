@@ -25,98 +25,60 @@ class DatabaseService {
   }
 
   private async createSchema() {
-    const tables = [
-      `CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL NOT NULL,
-        cost REAL DEFAULT 0,
-        stock INTEGER NOT NULL,
-        initial_stock INTEGER DEFAULT 0,
-        category TEXT,
-        image_path TEXT,
-        deleted INTEGER DEFAULT 0,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );`,
-      `CREATE TABLE IF NOT EXISTS customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        address TEXT,
-        email TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );`,
-      `CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        session_id INTEGER,
-        total REAL NOT NULL,
-        payment_method TEXT,
-        status TEXT,
-        card_id INTEGER,
-        cancelled INTEGER DEFAULT 0,
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, name TEXT NOT NULL,
+        description TEXT, price REAL NOT NULL, cost REAL DEFAULT 0,
+        stock INTEGER NOT NULL, initial_stock INTEGER DEFAULT 0,
+        category TEXT, image_path TEXT, deleted INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+        phone TEXT, address TEXT, email TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id INTEGER,
+        session_id INTEGER, total REAL NOT NULL, payment_method TEXT,
+        status TEXT, card_id INTEGER, cancelled INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(customer_id) REFERENCES customers(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)
-      );`,
-      `CREATE TABLE IF NOT EXISTS sale_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER NOT NULL,
-        unit_price REAL NOT NULL,
-        subtotal REAL NOT NULL,
+      );
+      CREATE TABLE IF NOT EXISTS sale_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, sale_id INTEGER,
+        product_id INTEGER, quantity INTEGER NOT NULL,
+        unit_price REAL NOT NULL, subtotal REAL NOT NULL,
         FOREIGN KEY(sale_id) REFERENCES sales(id),
         FOREIGN KEY(product_id) REFERENCES products(id)
-      );`,
-      `CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER,
-        amount REAL NOT NULL,
-        payment_method TEXT,
+      );
+      CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, sale_id INTEGER,
+        amount REAL NOT NULL, payment_method TEXT, card_id INTEGER,
         payment_date TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(sale_id) REFERENCES sales(id)
-      );`,
-      `CREATE TABLE IF NOT EXISTS sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        start_time TEXT,
-        end_time TEXT,
-        is_closed INTEGER DEFAULT 0,
-        name TEXT,
-        deleted INTEGER DEFAULT 0
-      );`,
-      `CREATE TABLE IF NOT EXISTS movements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER,
-        product_name TEXT,
-        type TEXT,
-        quantity INTEGER,
-        reason TEXT,
-        session_id INTEGER,
-        timestamp TEXT,
+      );
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, start_time TEXT,
+        end_time TEXT, is_closed INTEGER DEFAULT 0,
+        name TEXT, deleted INTEGER DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS movements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER,
+        product_name TEXT, type TEXT, quantity INTEGER, reason TEXT,
+        session_id INTEGER, timestamp TEXT,
         FOREIGN KEY(product_id) REFERENCES products(id),
         FOREIGN KEY(session_id) REFERENCES sessions(id)
-      );`,
-      `CREATE TABLE IF NOT EXISTS cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        bank TEXT,
-        account_number TEXT,
-        deleted INTEGER DEFAULT 0
-      );`,
-      `CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT
-      );`
-    ];
-
-    for (const table of tables) {
-      await this.db.execute(table);
-    }
+      );
+      CREATE TABLE IF NOT EXISTS cards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+        bank TEXT, account_number TEXT, deleted INTEGER DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY, value TEXT
+      );
+    `);
   }
 
   async execute(sql: string) {

@@ -98,8 +98,9 @@ export default function App() {
     const init = async () => {
       try {
         await dbService.initializeDatabase();
+        await loadSettings();
         await MigrationService.migrate();
-        await Promise.all([loadSettings(), fetchProducts(), fetchSession()]);
+        await Promise.all([fetchProducts(), fetchSession()]);
       } catch (e) {
         console.error("Error initializing app:", e);
       } finally {
